@@ -56,6 +56,12 @@ public class EmployeeResource {
     private final S3Service s3Service;
     private final FileRepository fileRepository;
 
+    /**
+     *
+     * @param employeeRepository -
+     * @param s3Service -
+     * @param fileRepository -
+     */
     public EmployeeResource(EmployeeRepository employeeRepository, S3Service s3Service, FileRepository fileRepository) {
         this.employeeRepository = employeeRepository;
         this.s3Service = s3Service;
@@ -226,8 +232,9 @@ public class EmployeeResource {
     /**
      * Method to upload a profile image
      *
-     * @param profile image file to upload
-     * @return
+     * @param file image file to upload
+     * @param filename name of uploaded file
+     * @return -
      */
     @PostMapping("/employees/profileImage/{filename:.+}")
     @ApiOperation(value = "Upload the users profile image", notes = "Allows you to upload a users profile image to S3")
@@ -246,8 +253,8 @@ public class EmployeeResource {
     /**
      * Method to download a profile image and serve it
      *
-     * @param filename
-     * @return
+     * @param filename -
+     * @return -
      */
     // See https://spring.io/guides/gs/uploading-files/
     @GetMapping("/employees/profileImage/{filename:.+}")
@@ -268,7 +275,7 @@ public class EmployeeResource {
      * Method to delete a profile image
      *
      * @param id - the id of the employee to delete the profile image for
-     * @return
+     * @return -
      */
     // See https://spring.io/guides/gs/uploading-files/
     @DeleteMapping("/employees/profileImage/{id}")
@@ -296,7 +303,7 @@ public class EmployeeResource {
      * Method to get all files uploaded for an empoloyee
      *
      * @param id - the id of the employee to delete the profile image for
-     * @return
+     * @return -
      */
     @GetMapping("/employees/files/{id}")
     @ResponseBody
@@ -311,8 +318,9 @@ public class EmployeeResource {
     /**
      * Method to upload a file
      *
+     * @param file file to upload
      * @param id - the id of the employee to delete the profile image for
-     * @return
+     * @return -
      */
     @PostMapping("/employees/files/{id}")
     @ResponseBody
@@ -322,7 +330,12 @@ public class EmployeeResource {
         @PathVariable @ApiParam(value = "Id of the employee to delete the profile image for") Long id
     ) {
         try {
-            Employee employee = employeeRepository.findById(id).get();
+            Optional<Employee> employeeOptional = employeeRepository.findById(id);
+            if (!employeeOptional.isPresent()) {
+                log.error("Failed to retrieve employee for the id {}", id);
+                return false;
+            }
+            Employee employee = employeeOptional.get();
             String fileName = file.getOriginalFilename();
             log.info("fileName:{}", fileName);
             String fileType = file.getContentType();
@@ -345,13 +358,19 @@ public class EmployeeResource {
      * Method to download a file
      *
      * @param id - the id of the file to download
-     * @return
+     * @return -
      */
     @GetMapping("/employees/files/download/{id}")
     @ResponseBody
     @ApiOperation(value = "Download a file", notes = "Allows you to download a file based on fileId")
     public ResponseEntity<byte[]> downloadFile(@PathVariable @ApiParam(value = "Id of the file to download") Long id) {
-        File file = fileRepository.findById(id).get();
+        Optional<File> fileOptional = fileRepository.findById(id);
+        if (!fileOptional.isPresent()) {
+            log.error("Failed to retrieve file for the id {}", id);
+            return ResponseEntity.badRequest().body("Unable to find file".getBytes());
+        }
+
+        File file = fileOptional.get();
         String s3FileKey = file.gets3FileKey();
 
         byte[] fileByteArray = s3Service.downloadFile(s3FileKey);
@@ -365,7 +384,7 @@ public class EmployeeResource {
      * Method to delete a file based on id
      *
      * @param id - the id of the file to delete
-     * @return
+     * @return -
      */
     // See https://spring.io/guides/gs/uploading-files/
     @DeleteMapping("/employees/files/{id}")
