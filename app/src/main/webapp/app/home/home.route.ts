@@ -6,6 +6,6 @@ export const HOME_ROUTE: Route = {
   path: '',
   component: HomeComponent,
   data: {
-    pageTitle: 'Demo - SmallWindow21',
+    pageTitle: 'SmallWindow21',
   },
 };
